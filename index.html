@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignment Tracker</title>
+  <style>
+    .container {
+      display: flex;
+      justify-content: space-between;
+    }
+    .left-pane, .right-pane {
+      width: 45%;
+    }
+    .striked {
+      text-decoration: line-through;
+    }
+  </style>
+</head>
+<body>
+  <h1 align="center" style="color: green">WELCOME TO REVEASY!</h1>
+
+  <div class="container">
+    <!-- Left Pane: Form and Upcoming Assignments -->
+    <div class="left-pane">
+      <!-- Form to input the study and mode -->
+      <form id="studyForm">
+        <label for="study">Enter Study:</label>
+        <input type="text" id="study" name="study" required>
+
+        <label for="mode">Mode:</label>
+        <select id="mode" name="mode" required>
+          <option value="S">S</option>
+          <option value="R">R</option>
+          <option value="P">P</option>
+          <option value="US">US</option>
+          <option value="UR">UR</option>
+          <option value="UP">UP</option>
+          <option value="N">N</option>
+        </select>
+
+        <button type="submit">Add Study</button>
+      </form>
+
+      <h2 align="center" style="color: green">UPCOMING AND PENDING ASSIGNMENTS:</h2>
+      <ul id="assignmentList"></ul>
+    </div>
+
+    <!-- Right Pane: Completed Assignments -->
+    <div class="right-pane">
+      <h2 align="center" style="color: blue">COMPLETED ASSIGNMENTS:</h2>
+      <ul id="completedList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const assignmentList = document.getElementById('assignmentList');
+    const completedList = document.getElementById('completedList');
+    const form = document.getElementById('studyForm');
+    
+    // Get assignments from localStorage or initialize an empty array
+    let assignments = JSON.parse(localStorage.getItem('assignments')) || [];
+    let completedAssignments = JSON.parse(localStorage.getItem('completedAssignments')) || [];
+
+    // Add delays for modes (in days)
+    const modeDelays = {
+      S: 3,
+      R: 5,
+      P: 7,
+      US: 13,
+      UR: 15,
+      UP: 17,
+      N: 0 // 'N' should show immediately when selected and deferred
+    };
+
+    // Function to calculate future date
+    function calculateFutureDate(days) {
+      const currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() + days);
+      return currentDate;
+    }
+
+    // Function to display the assignment list
+    function displayAssignments() {
+      assignmentList.innerHTML = ''; // Clear current list
+
+      assignments.forEach((assignment, index) => {
+        const showDate = new Date(assignment.showDate);
+        const today = new Date();
+
+        // Only show assignments if the show date is past or today
+        if (showDate <= today) {
+          const li = document.createElement('li');
+          li.textContent = `${assignment.study} - Due: ${showDate.toDateString()}`;
+
+          // Add checkbox for marking the assignment
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+
+          // Add select box for changing the mode
+          const select = document.createElement('select');
+          ['S', 'R', 'P', 'US', 'UR', 'UP', 'N'].forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            opt.textContent = option;
+            select.appendChild(opt);
+          });
+
+          // Set current mode in the select box
+          select.value = assignment.mode;
+
+          // Button to defer the assignment based on mode
+          const deferButton = document.createElement('button');
+          deferButton.textContent = "Completed";
+
+          // On clicking defer button, update the show date based on selected mode
+          deferButton.addEventListener('click', function () {
+            if (checkbox.checked) {
+              // Move assignment to completed list
+              completedAssignments.push(assignment);
+              assignments.splice(index, 1); // Remove from assignments
+
+              // Save and refresh
+              saveAssignments();
+              saveCompletedAssignments();
+              displayAssignments();
+              displayCompletedAssignments();
+            } else {
+              alert('Please check the checkbox before marking the assignment as completed.');
+            }
+          });
+
+          // Append the checkbox, select box, and button to the list item
+          li.appendChild(checkbox);
+          li.appendChild(select);
+          li.appendChild(deferButton);
+          assignmentList.appendChild(li);
+        }
+      });
+    }
+
+    // Function to display completed assignments
+    function displayCompletedAssignments() {
+      completedList.innerHTML = ''; // Clear current list
+
+      completedAssignments.forEach((assignment) => {
+        const li = document.createElement('li');
+        li.classList.add('striked');
+        li.textContent = `${assignment.study} - Completed on: ${new Date().toDateString()}`;
+        completedList.appendChild(li);
+      });
+    }
+
+    // Function to save assignments to localStorage
+    function saveAssignments() {
+      localStorage.setItem('assignments', JSON.stringify(assignments));
+    }
+
+    // Function to save completed assignments to localStorage
+    function saveCompletedAssignments() {
+      localStorage.setItem('completedAssignments', JSON.stringify(completedAssignments));
+    }
+
+    // Form submission event handler to add new study
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      const study = document.getElementById('study').value;
+      const mode = document.getElementById('mode').value;
+
+      const showDate = calculateFutureDate(modeDelays[mode]);
+
+      // Add new assignment
+      assignments.push({
+        study,
+        mode,
+        showDate: showDate
+      });
+
+      saveAssignments();
+      displayAssignments();
+
+      // Reset the form
+      form.reset();
+    });
+
+    // Display assignments and completed studies on page load
+    displayAssignments();
+    displayCompletedAssignments();
+  </script>
+</body>
+</html>
